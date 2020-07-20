@@ -1,0 +1,60 @@
+const int MQ_PINCO = A1;      // Pin del sensor
+const int RL_VALUECO = 5;      // Resistencia RL del modulo en Kilo ohms
+const int R0CO = 10;          // Resistencia R0 del sensor en Kilo ohms
+ 
+// Datos para lectura multiple
+const int READ_SAMPLE_INTERVALCO = 100;    // Tiempo entre muestras
+const int READ_SAMPLE_TIMESCO = 5;       // Numero muestras
+ 
+// Ajustar estos valores para vuestro sensor según el Datasheet
+// (opcionalmente, según la calibración que hayáis realizado)
+const float X0CO = 200;
+const float Y0CO = 1.7;
+const float X1CO = 10000;
+const float Y1CO = 0.28;
+ 
+// Puntos de la curva de concentración {X, Y}
+const float punto0CO[] = { log10(X0CO), log10(Y0CO) };
+const float punto1CO[] = { log10(X1CO), log10(Y1CO) };
+ 
+// Calcular pendiente y coordenada abscisas
+const float scopeCO = (punto1CO[1] - punto0CO[1]) / (punto1CO[0] - punto0CO[0]);
+const float coordCO = punto0CO[1] - punto0CO[0] * scopeCO;
+ 
+void setup()
+{
+   Serial.begin(9600);
+}
+ 
+void loop()
+{
+   float rs_medCO = readMQ(MQ_PINCO);      // Obtener la Rs promedio
+   float concentrationCO = getConcentrationCO(rs_medCO/R0CO);   // Obtener la concentración
+   
+   // Mostrar el valor de la concentración por serial
+   Serial.println("Concentración: ");
+   Serial.println(concentrationCO);
+}
+ 
+// Obtener la resistencia promedio en N muestras
+float readMQ(int mq_pinCO)
+{
+   float rsCO = 0;
+   for (int i = 0;i<READ_SAMPLE_TIMESCO;i++) {
+      rsCO += getMQResistanceCO(analogRead(mq_pinCO));
+      delay(READ_SAMPLE_INTERVALCO);
+   }
+   return rsCO / READ_SAMPLE_TIMESCO;
+}
+ 
+// Obtener resistencia a partir de la lectura analogica
+float getMQResistanceCO(int raw_adcCO)
+{
+   return (((float)RL_VALUECO/ 1000.0*(1023 - raw_adcCO) / raw_adcCO));
+}
+ 
+// Obtener concentracion 10^(coord + scope * log (rs/r0)
+float getConcentrationCO(float rs_ro_ratioCO)
+{
+   return pow(10, coordCO + scopeCO * log(rs_ro_ratioCO));
+}
