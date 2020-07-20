@@ -1,0 +1,208 @@
+// INICIALIZACION VARIABLES TEMPERATURE*********************************
+#include <OneWire.h>                
+#include <DallasTemperature.h>
+ 
+OneWire ourWire(A0);                //Se establece el pin 2  como bus OneWire
+ 
+DallasTemperature sensors(&ourWire); //Se declara una variable u objeto para nuestro sensor
+//************************************************************************
+
+
+// INICIALIZACION VARIABLES METANO **********************************
+const int MQ_PIN = 15;      // Pin del sensor
+const int RL_VALUE = 5;      // Resistencia RL del modulo en Kilo ohms
+const int R0 = 10;          // Resistencia R0 del sensor en Kilo ohms
+ 
+// Datos para lectura multiple
+const int READ_SAMPLE_INTERVAL = 100;    // Tiempo entre muestras
+const int READ_SAMPLE_TIMES = 5;       // Numero muestras
+ 
+// Ajustar estos valores para vuestro sensor según el Datasheet
+// (opcionalmente, según la calibración que hayáis realizado)
+const float X0 = 200;
+const float Y0 = 1.7;
+const float X1 = 10000;
+const float Y1 = 0.28;
+ 
+// Puntos de la curva de concentración {X, Y}
+const float punto0[] = { log10(X0), log10(Y0) };
+const float punto1[] = { log10(X1), log10(Y1) };
+ 
+// Calcular pendiente y coordenada abscisas
+const float scope = (punto1[1] - punto0[1]) / (punto1[0] - punto0[0]);
+const float coord = punto0[1] - punto0[0] * scope;
+ //********************************************************************
+
+// INICIALIZACION VARIABLES CO***************************************
+const int MQ_PINCO = A1;      // Pin del sensor
+const int RL_VALUECO = 5;      // Resistencia RL del modulo en Kilo ohms
+const int R0CO = 10;          // Resistencia R0 del sensor en Kilo ohms
+ 
+// Datos para lectura multiple
+const int READ_SAMPLE_INTERVALCO = 100;    // Tiempo entre muestras
+const int READ_SAMPLE_TIMESCO = 5;       // Numero muestras
+ 
+// Ajustar estos valores para vuestro sensor según el Datasheet
+// (opcionalmente, según la calibración que hayáis realizado)
+const float X0CO = 200;
+const float Y0CO = 1.7;
+const float X1CO = 10000;
+const float Y1CO = 0.28;
+ 
+// Puntos de la curva de concentración {X, Y}
+const float punto0CO[] = { log10(X0CO), log10(Y0CO) };
+const float punto1CO[] = { log10(X1CO), log10(Y1CO) };
+ 
+// Calcular pendiente y coordenada abscisas
+const float scopeCO = (punto1CO[1] - punto0CO[1]) / (punto1CO[0] - punto0CO[0]);
+const float coordCO = punto0CO[1] - punto0CO[0] * scopeCO;
+ 
+
+//******************************************************************
+
+//INICIALIZACION VARIABLES CO2*************************************
+const int MQ_PINC02 = A14;      // Pin del sensor
+const int RL_VALUEC02  = 5;      // Resistencia RL del modulo en Kilo ohms
+const int R0C02  = 10;          // Resistencia R0 del sensor en Kilo ohms
+ 
+// Datos para lectura multiple
+const int READ_SAMPLE_INTERVALC02  = 100;    // Tiempo entre muestras
+const int READ_SAMPLE_TIMESC02  = 5;       // Numero muestras
+ 
+// Ajustar estos valores para vuestro sensor según el Datasheet
+// (opcionalmente, según la calibración que hayáis realizado)
+const float X0C02  = 200;
+const float Y0C02  = 1.7;
+const float X1C02  = 10000;
+const float Y1C02  = 0.28;
+ 
+// Puntos de la curva de concentración {X, Y}
+const float punto0C02[] = { log10(X0C02), log10(Y0C02) };
+const float punto1C02[] = { log10(X1C02), log10(Y1C02) };
+ 
+// Calcular pendiente y coordenada abscisas
+const float scopeC02  = (punto1C02 [1] - punto0C02 [1]) / (punto1C02 [0] - punto0C02 [0]);
+const float coordC02  = punto0C02 [1] - punto0C02 [0] * scopeC02 ;
+
+//******************************************************************
+
+
+
+void setup() {
+delay(1000);
+Serial.begin(9600);
+sensors.begin();   //Se inicia el sensor
+
+}
+ 
+void loop() {
+// CODIGO TEMPERATURE******************************
+sensors.requestTemperatures();   //Se envía el comando para leer la temperatura
+float temp= sensors.getTempCByIndex(0); //Se obtiene la temperatura en ºC
+//***********************************************
+
+// CODIGO METANO **********************************
+float rs_med = readMQ(MQ_PIN);      // Obtener la Rs promedio
+   float concentration = getConcentration(rs_med/R0);   // Obtener la concentración
+//**************************************************
+
+// CODIGO CO****************************************
+ float rs_medCO = readMQ(MQ_PINCO);      // Obtener la Rs promedio
+   float concentrationCO = getConcentrationCO(rs_medCO/R0CO);   // Obtener la concentración
+ //**************************************************  
+
+// CODIGO CO2****************************************
+float rs_medC02  = readMQ(MQ_PINC02 );      // Obtener la Rs promedio
+   float concentrationC02  = getConcentrationC02 (rs_medC02 /R0C02 );   // Obtener la concentración
+//****************************************************
+
+
+  
+// IMPRIMIR VECTOR*****************************
+ float S0 = temp;
+ float S1 = concentration;
+ float S2 = concentrationCO;
+ float S3 = concentrationC02;
+ float S4 = PM01Value;
+ float S5 = PM2_5Value;
+ float S6 = PM10Value;
+float sensors[7] = { S0, S1, S2, S3, S4, S5, S6};
+ Serial << S0 << "  " << S1 << "  " << S2 << "  " << S3 << "  " << S4 << "  " << S5 << "  " << S6 <<  " ";
+displayInfo();
+Serial.println();
+delay (100);
+//************************************************
+
+}
+// Obtener la resistencia promedio en N muestras METANO*******************
+float readMQ(int mq_pin)
+{
+   float rs = 0;
+   for (int i = 0;i<READ_SAMPLE_TIMES;i++) {
+      rs += getMQResistance(analogRead(mq_pin));
+      delay(READ_SAMPLE_INTERVAL);
+   }
+   return rs / READ_SAMPLE_TIMES;
+}
+ 
+// Obtener resistencia a partir de la lectura analogica
+float getMQResistance(int raw_adc)
+{
+   return (((float)RL_VALUE / 1000.0*(1023 - raw_adc) / raw_adc));
+}
+ 
+// Obtener concentracion 10^(coord + scope * log (rs/r0)
+float getConcentration(float rs_ro_ratio)
+{
+   return pow(10, coord + scope * log(rs_ro_ratio));
+}
+//***************************************************************************
+
+// Obtener la resistencia promedio en N muestras CO***************************
+float readMQ(int mq_pinCO)
+{
+   float rsCO = 0;
+   for (int i = 0;i<READ_SAMPLE_TIMESCO;i++) {
+      rsCO += getMQResistanceCO(analogRead(mq_pinCO));
+      delay(READ_SAMPLE_INTERVALCO);
+   }
+   return rsCO / READ_SAMPLE_TIMESCO;
+}
+ 
+// Obtener resistencia a partir de la lectura analogica
+float getMQResistanceCO(int raw_adcCO)
+{
+   return (((float)RL_VALUECO/ 1000.0*(1023 - raw_adcCO) / raw_adcCO));
+}
+ 
+// Obtener concentracion 10^(coord + scope * log (rs/r0)
+float getConcentrationCO(float rs_ro_ratioCO)
+{
+   return pow(10, coordCO + scopeCO * log(rs_ro_ratioCO));
+}
+**************************************************************************
+
+
+// Obtener la resistencia promedio en N muestras CO2***********************
+float readMQ(int mq_pinC02)
+{
+   float rsC02  = 0;
+   for (int i = 0;i<READ_SAMPLE_TIMESC02 ;i++) {
+      rsC02  += getMQResistanceC02 (analogRead(mq_pinC02 ));
+      delay(READ_SAMPLE_INTERVALC02 );
+   }
+   return rsC02  / READ_SAMPLE_TIMESC02 ;
+}
+ 
+// Obtener resistencia a partir de la lectura analogica
+float getMQResistanceC02 (int raw_adcC02 )
+{
+   return (((float)RL_VALUEC02  / 1000.0*(1023 - raw_adcC02 ) / raw_adcC02 ));
+}
+ 
+// Obtener concentracion 10^(coord + scope * log (rs/r0)
+float getConcentrationC02 (float rs_ro_ratioC02 )
+{
+   return pow(10, coordC02  + scopeC02  * log(rs_ro_ratioC02 ));
+}
+******************************************************************************
