@@ -1,0 +1,87 @@
+#include <SoftwareSerial.h>//incluimos SoftwareSerial
+#include <TinyGPS.h>//incluimos TinyGPS
+TinyGPS gps;//Declaramos el objeto gps
+SoftwareSerial serialgps(50,51);//Declaramos el pin 50 Tx y 51 Rx due, mega
+//Declaramos la variables para la obtención de datos
+int year;
+byte month, day, hour, minute, second, hundredths;
+unsigned long chars;
+unsigned short sentences, failed_checksum;
+
+ 
+
+void setup()
+
+{
+
+ 
+
+Serial.begin(9600);//Iniciamos el puerto serie
+
+serialgps.begin(9600);//Iniciamos el puerto serie del gps
+
+}
+
+ 
+
+void loop()
+
+{
+
+while(serialgps.available()) 
+
+{
+
+int c = serialgps.read(); 
+
+if(gps.encode(c)) 
+
+{
+
+float latitude, longitude;
+
+gps.f_get_position(&latitude, &longitude);
+
+//Serial.print("Latitud/Longitud: "); 
+Serial.print(latitude,5); 
+Serial.print(" "); 
+Serial.print(longitude,5);
+Serial.print(" "); 
+gps.crack_datetime(&year,&month,&day,&hour,&minute,&second,&hundredths);
+//Serial.print("Fecha: "); 
+Serial.print(day, DEC); 
+Serial.print("/"); 
+Serial.print(month, DEC);
+Serial.print("/"); 
+Serial.print(year);
+//Serial.print(" Hora: ");
+Serial.print(" "); 
+Serial.print(hour-5, DEC); // tiene una diferencia de 5 horas 
+Serial.print(":"); 
+Serial.print(minute, DEC); 
+Serial.print(":");
+Serial.print(second, DEC); 
+Serial.print(":");
+Serial.print(hundredths, DEC);
+Serial.print(" "); 
+//Serial.print("Altitud (metros): "); 
+Serial.print(gps.f_altitude()); 
+Serial.print(" "); 
+//Serial.print("Rumbo (grados): "); 
+Serial.print(" "); 
+Serial.print(gps.f_course()); 
+//Serial.print("Velocidad(kmph): "); 
+Serial.print(" "); 
+Serial.print(gps.f_speed_kmph());
+//Serial.print("Satelites: "); 
+Serial.print(" "); 
+Serial.print(gps.satellites());
+Serial.println();
+
+gps.stats(&chars, &sentences, &failed_checksum);
+
+}
+
+}
+
+}
